@@ -27,8 +27,8 @@ var Chess = function (FENString) {
     ]
 
 //TRACKED VARIABLES
-    let currentPosition
-    currentPosition = load(FENString) || DEFAULT_START_POSITION
+    let currentBoard
+    currentBoard = load(FENString) || DEFAULT_START_POSITION
 
 
 //HELPER FUNCTIONS
@@ -38,7 +38,7 @@ var Chess = function (FENString) {
     }
 
     function toAlgebraic (arr) {
-        let char = String.fromCharCode(97 + arr[1]);
+        let char = String.fromCharCode(97 + arr[1])
 		return (char + (8-arr[0]).toString()).toUpperCase()
     }
 
@@ -51,10 +51,10 @@ var Chess = function (FENString) {
     }
 
 
-//FEN FUNCTIONS
+//*FEN FUNCTIONS
 // 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
     function parseFenRow (result, value) {
-        if(isNaN(value)){
+        if (isNaN(value)) {
             result.push(value)
             return result
         } 
@@ -70,10 +70,10 @@ var Chess = function (FENString) {
         return row.split('').reduce(parseFenRow, [])
     }
 
-    function validateFEN (fen) {
-        if(fen === undefined) { return false }
+    function isValidFEN (fen) {
+        if (fen === undefined) return false 
         let rows = fen.split(' ')[0].split('/') 
-        if(rows.length !== BOARD_SIZE) { 
+        if (rows.length !== BOARD_SIZE) { 
             throw new Error('Fen string has wrong number of rows.') 
         }
         rows.forEach(row => {
@@ -85,20 +85,20 @@ var Chess = function (FENString) {
         return true
     }
 
-//MOVES FUNCTIONS    
-    function calculateDirectMoves (position, moveArray) {
+//*MOVES FUNCTIONS    
+    function directMoves (position, moveArray) {
         return moveArray.reduce((moves, move) => {
             let newPosition = addVectors(position, move)
-            if(isMoveLegal(newPosition)){ moves.push(newPosition) }  
+            if (isMoveLegal(newPosition))  moves.push(newPosition)   
             return moves
         }, [])
      
     }
 
-    function calculatePathedMoves (position, moveArray) {
+    function pathedMoves (position, moveArray) {
         return moveArray.reduce((moves, move) => {
             let pathing = true, newPosition = addVectors(position, move)
-            while(pathing){
+            while (pathing) {
                 isMoveLegal(newPosition) ? moves.push(newPosition) : pathing = false  
                 newPosition = addVectors(newPosition, move)
             }    
@@ -107,7 +107,7 @@ var Chess = function (FENString) {
     }
 
     function isMoveLegal (pos) {
-        if(isOnBoard(pos) && getSquare(pos) === null) {
+        if (isOnBoard(pos) && getSquare(pos) === null) {
             return true
         }
         return false
@@ -116,64 +116,55 @@ var Chess = function (FENString) {
 
     
 
-    //MAIN API FUNCTIONS
+    //*API FUNCTIONS
     // 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
     function load (fenString) { 
-        if(!validateFEN(fenString)) { return false }
-    
+        if (!isValidFEN(fenString)) return false
         let result = []
         let rows = fenString.split(' ')[0].split('/') 
-        rows.forEach(row => {
-            let newRow = convertFenRowToArray(row)
-            result.push(newRow)
-        })
-        currentPosition = result
+
+        rows.forEach(row => result.push(convertFenRowToArray(row)))
+
+        currentBoard = result
         return result
     }
 
     function reset () {
-        currentPosition = DEFAULT_START_POSITION
+        currentBoard = DEFAULT_START_POSITION
     }
 
     function clear () {
-        currentPosition =EMPTY_POSITION 
+        currentBoard = EMPTY_POSITION 
     }
 
     function getSquare (square) {
-        if(square === undefined) { return null }
-        let coordinates = square
-        if(!Array.isArray(square)){
-            coordinates = toArrayCoordinates(square)
-        }
-      
-        let p = currentPosition[coordinates[0]][coordinates[1]]
-        if(p === '-') { return null }
-        return Pieces(p, [coordinates[0], coordinates[1]])
+        if (square === undefined) return null 
+        let coor
+        Array.isArray(square) ? coor = square : coor = toArrayCoordinates(square)    
+        let pieceType = currentBoard[coor[0]][coor[1]]
+        return pieceType === '-' ? null : Pieces(pieceType, [coor[0], coor[1]])
     }
 
     function validMoves (square) {
-        var moves = []
-        var piece = getSquare(square)
-        if(!piece) { return moves }
+        let piece = getSquare(square)
+        if(!piece) return [] 
 
-        if(piece.type === 'p' || piece.type === 'n' || piece.type === 'k'){
-            moves = calculateDirectMoves(piece.position, piece.movePattern)
-        } else {
-            moves = calculatePathedMoves(piece.position, piece.movePattern)
-        }
-
+        let moves = []
+        moves = piece.pathable ? pathedMoves(piece.position, piece.movePattern) : 
+                                 directMoves(piece.position, piece.movePattern)
+       
         return moves.map((coordinates) => toAlgebraic(coordinates))
     }
 
     function place (piece, square) {
-        var coor = toArrayCoordinates(square)
-        currentPosition[coor[0]][coor[1]] = piece
+        let coor = toArrayCoordinates(square)
+        currentBoard[coor[0]][coor[1]] = piece
         return Pieces(piece)
     }
 
 //EXPOSE API FUNCTIONS AS OBJECT
     return {
-        position: () => currentPosition,
+        position: () => currentBoard,
         load,
         reset,
         clear,
