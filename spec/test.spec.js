@@ -41,6 +41,19 @@ describe("Chess object", () => {
         var chess = Chess()
         expect(chess.position()).toEqual(startPosition)
     })
+    it("should be white to move", () => { 
+        var chess = Chess()
+        expect(chess.player()).toEqual('white')
+    })
+    it("should be black to move", () => { 
+        var chess = Chess()
+        chess.setPlayer('black')
+        expect(chess.player()).toEqual('black')
+    })
+    it("should only be allowed to set player to black or white", () => { 
+        var chess = Chess()
+        expect(() => chess.setPlayer('blue')).toThrow(new Error('Color must be black or white.'))
+    })
     describe("load function", () => {
         it("should produce position from start FEN string", () => {
             var chess = Chess(startFen)
@@ -89,6 +102,110 @@ describe("Chess object", () => {
             chess.clear()
             expect(chess.position()).toEqual(emptyPosition)
         })
+    })
+
+    describe("inCheck function", () => {
+        it("should return null if current player is not in check", () => {
+            var chess = Chess()
+            expect(chess.inCheck()).toEqual(null)
+            chess.setPlayer('black')
+            expect(chess.inCheck()).toEqual(null)
+        })
+        it("should work for knight checks on white", () => {
+            var chess = Chess()
+            chess.place('n','F3')
+            chess.place('n', 'D3')
+            expect(chess.inCheck().sort()).toEqual(['D3','F3'].sort())
+        })
+        it("should work for knight checks on black", () => {
+            var chess = Chess()
+            chess.setPlayer('black')
+            chess.place('N','F6')
+            chess.place('N', 'D6')
+            expect(chess.inCheck().sort()).toEqual(['D6','F6'].sort())
+        })
+        it("should work for rook checks on white", () => {
+            var chess = Chess()
+            chess.clear()
+            chess.place('K','A1')
+            chess.place('r', 'A8')
+            chess.place('r', 'H1')
+            expect(chess.inCheck().sort()).toEqual(['A8','H1'].sort())
+        })
+        it("should work for rook checks on black", () => {
+            var chess = Chess()
+            chess.clear()
+            chess.setPlayer('black')
+            chess.place('k','A1')
+            chess.place('R', 'A8')
+            chess.place('R', 'H1')
+            expect(chess.inCheck().sort()).toEqual(['A8','H1'].sort())
+        })
+        it("should work for bishop checks on white", () => {
+            var chess = Chess()
+            chess.clear()
+            chess.place('K','C4')
+            chess.place('b', 'A6')
+            chess.place('b', 'A2')
+            chess.place('b', 'G8')
+            chess.place('b', 'E3')
+            expect(chess.inCheck().sort()).toEqual(['A6','A2','G8'].sort())
+        })
+        it("should work for bishop checks on black", () => {
+            var chess = Chess()
+            chess.clear()
+            chess.setPlayer('black')
+            chess.place('k','C4')
+            chess.place('B', 'A6')
+            chess.place('B', 'A2')
+            chess.place('B', 'G8')
+            chess.place('B', 'E3')
+            expect(chess.inCheck().sort()).toEqual(['A6','A2','G8'].sort())
+        })
+        it("should work for 2 kings checking each other", () => {
+            var chess = Chess()
+            chess.clear()
+            chess.place('k','A2')
+            chess.place('K', 'A1')
+            expect(chess.inCheck()).toEqual(['A2'])
+            chess.setPlayer('black')
+            expect(chess.inCheck()).toEqual(['A1'])
+        })
+        it("should work for pawn checks on white", () => {
+            var chess = Chess()
+            chess.place('p','F2')
+            expect(chess.inCheck()).toEqual(['F2'])
+        })
+        it("should work for pawn checks on black", () => {
+            var chess = Chess()
+            chess.setPlayer('black')
+            chess.place('P','D7')
+            expect(chess.inCheck()).toEqual(['D7'])
+        })
+        it("pawns should not check backwards", () => {
+            var chess = Chess()
+            chess.clear()
+            chess.place('p', 'A2')
+            chess.place('K', 'B3')
+            expect(chess.inCheck('B3')).toEqual(null)
+        })
+        it("should work for queen checks", () => {
+            var chess = Chess()
+            chess.clear()
+            chess.setPlayer('black')
+            chess.place('k','A1')
+            chess.place('Q','A8')
+            chess.place('Q','H8')
+            expect(chess.inCheck()).toEqual(['A8', 'H8'])
+        })
+        it("kings should not check over distance!", () => {
+            var chess = Chess()
+            chess.clear()
+            chess.place('K','E2')
+            chess.place('k','E7')
+            expect(chess.inCheck()).toEqual(null)
+        })
+        
     })
 
 
@@ -171,6 +288,7 @@ describe("Chess object", () => {
             var chess = Chess()
             expect(chess.place('P', 'E6').type).toEqual('p')
             expect(chess.place('P', 'E6').color).toEqual('white')
+            expect(chess.place('P', 'A1').position).toEqual([7,0])
         })
         it("should place knights", () => {
             var chess = Chess()
@@ -197,6 +315,40 @@ describe("Chess object", () => {
             expect(chess.getSquare('A1').type).toEqual('k')
             expect(chess.getSquare('A1').color).toEqual('white')
         })
+
+    })
+
+    describe("find functions", () => {
+        it("should return list of squares with matching piece and color", () => {
+            var chess = Chess()
+            expect(chess.find('p', 'white')).toEqual(['A2','B2','C2','D2','E2','F2','G2','H2'])
+            expect(chess.find('p', 'black')).toEqual(['A7','B7','C7','D7','E7','F7','G7','H7'])
+        })
+        it("should find queen", () => {
+            var chess = Chess()
+            expect(chess.find('q', 'white')).toEqual(['D1'])
+            expect(chess.find('q', 'black')).toEqual(['D8'])
+        })
+        it("should find bishops", () => {
+            var chess = Chess()
+            expect(chess.find('b', 'white')).toEqual(['C1', 'F1'])
+            expect(chess.find('b', 'black')).toEqual(['C8', 'F8'])
+        })
+        it("should find rooks", () => {
+            var chess = Chess()
+            expect(chess.find('r', 'white')).toEqual(['A1', 'H1'])
+            expect(chess.find('r', 'black')).toEqual(['A8', 'H8'])
+        })
+        it("should find knights", () => {
+            var chess = Chess()
+            expect(chess.find('n', 'white')).toEqual(['B1', 'G1'])
+            expect(chess.find('n', 'black')).toEqual(['B8', 'G8'])
+        })
+        it("should find kings", () => {
+            var chess = Chess()
+            expect(chess.find('k', 'white')).toEqual(['E1'])
+            expect(chess.find('k', 'black')).toEqual(['E8'])
+        })
     })
 
 
@@ -216,21 +368,21 @@ describe("Chess object", () => {
         it("should be able to get valid moves of a rook", () => {
             var chess = Chess()
             chess.clear()
-            chess.place('r', 'A1')
+            chess.place('R', 'A1')
             var valid = ['A2','A3','A4','A5','A6','A7','A8','B1','C1','D1','E1','F1','G1','H1']
             expect(chess.validMoves('A1').sort()).toEqual(valid.sort())
         })
         it("should be able to get valid moves of a bishop", () => {
             var chess = Chess()
             chess.clear()
-            chess.place('b', 'C3')
+            chess.place('B', 'C3')
             var valid = ['A1','B2','D4','E5','F6','G7','H8','B4','A5','D2','E1']
             expect(chess.validMoves('C3').sort()).toEqual(valid.sort())
         })
         it("should be able to get valid moves of a queen", () => {
             var chess = Chess()
             chess.clear()
-            chess.place('q', 'C3')
+            chess.place('Q', 'C3')
             var valid = ['A1','B2','D4','E5','F6','G7','H8','B4','A5','D2','E1',
                          'A3','B3','D3','E3','F3','G3','H3',
                         'C1','C2','C4','C5','C6','C7','C8']
@@ -239,6 +391,125 @@ describe("Chess object", () => {
         it("should be able to get valid moves of a king", () => {
             var chess = Chess()
             expect(chess.validMoves('E1')).toEqual([])
+        })
+        it("should not show squares with friendly pieces as valid", () => {
+            var chess = Chess()        
+            expect(chess.validMoves('A1')).toEqual([])
+        })
+        it("should show squares with enemy pieces as valid", () => {
+            var chess = Chess()
+            chess.place('B','A6')
+            chess.place('P', 'B5')
+            expect(chess.validMoves('A6')).toEqual(['B7'])
+        })
+        it("should not continue pathing over enemy pieces", () => {
+            var chess = Chess()
+            chess.place('Q','A8')
+            expect(chess.validMoves('A8')).toEqual(['A7','B8','B7'])
+        })
+        it("knights should be able to capture enemies", () => {
+            var chess = Chess()
+            chess.clear()
+            chess.place('N','A1')
+            chess.place('p', 'C2')
+            chess.place('P', 'B3')
+            expect(chess.validMoves('A1')).toEqual(['C2'])
+        })
+        it("black piece should have no valid moves when it is whites turn", () => {
+            var chess = Chess()
+            chess.place('q', 'A7')
+            expect(chess.validMoves('A7')).toEqual([])
+        })
+        it("white piece should have no valid moves on blacks turn", () => {
+            var chess = Chess()
+            chess.place('Q', 'A2')
+            chess.setPlayer('black')
+            expect(chess.validMoves('A2')).toEqual([])
+        })
+        it("black pieces have valid moves on blacks turn", () => {
+            var chess = Chess()
+            chess.place('n', 'A1')
+            chess.setPlayer('black')
+            expect(chess.validMoves('A1')).toEqual(['B3', 'C2'])
+        })
+        it("black pieces have valid moves on blacks turn", () => {
+            var chess = Chess()
+            chess.place('n', 'A1')
+            chess.setPlayer('black')
+            expect(chess.validMoves('A1')).toEqual(['B3', 'C2'])
+        })
+
+        describe("pawns", () => {
+            it("white should have 2 valid moves on start position", () => {
+                var chess = Chess()
+                expect(chess.validMoves('A2')).toEqual(['A3', 'A4'])
+                expect(chess.validMoves('E2')).toEqual(['E3', 'E4'])
+            })
+            it("black should have 2 valid moves on start position", () => {
+                var chess = Chess()
+                chess.setPlayer('black')
+                expect(chess.validMoves('A7')).toEqual(['A6', 'A5'])
+                expect(chess.validMoves('E7')).toEqual(['E6', 'E5'])
+            })
+            it("should be blocked by enemy pawns", () => {
+                var chess = Chess()
+                chess.place('p','A3')
+                expect(chess.validMoves('A2')).toEqual([])
+            })
+            it("should be blocked by friendly pawns", () => {
+                var chess = Chess()
+                chess.place('P','A3')
+                expect(chess.validMoves('A2')).toEqual([])
+            })
+            it("should not block first move if another pawn is 2 squares infront", () => {
+                var chess = Chess()
+                chess.place('p','A4')
+                expect(chess.validMoves('A2')).toEqual(['A3'])
+            })
+            it("white should only be able to move one square if it is not on starting position", () => {
+                var chess = Chess()
+                chess.place('P', 'A3')
+                expect(chess.validMoves('A3')).toEqual(['A4'])
+            })
+            it("black should only be able to move one square if it is not on starting position", () => {
+                var chess = Chess()
+                chess.setPlayer('black')
+                chess.place('p', 'A6')
+                expect(chess.validMoves('A6')).toEqual(['A5'])
+            })
+            it("should have valid capture squares if an enemy piece is there", () => {
+                var chess = Chess()
+                chess.place('p', 'A3')
+                chess.place('p', 'C3')
+                expect(chess.validMoves('B2')).toEqual(['B3', 'B4', 'A3','C3'])
+            })
+            it("should not capture friendly pieces", () => {
+                var chess = Chess()
+                chess.place('P', 'B1')
+                expect(chess.validMoves('B1')).toEqual([])
+            })
+            it("black should have valid capture squares if an enemy piece is there", () => {
+                var chess = Chess()
+                chess.setPlayer('black')
+                chess.place('P', 'A6')
+                chess.place('P', 'C6')
+                expect(chess.validMoves('B7')).toEqual(['B6', 'B5', 'A6','C6'])
+            })
+            it("black should not capture friendly pieces", () => {
+                var chess = Chess()
+                chess.place('p', 'B8')
+                expect(chess.validMoves('B8')).toEqual([])
+            })
+            it("should not capture backwards", () => {
+                var chess = Chess()
+                chess.clear()
+                chess.place('p', 'A2')
+                chess.place('P', 'B3')
+                expect(chess.validMoves('B3')).toEqual(['B4'])
+                chess.setPlayer('black')
+                expect(chess.validMoves('A2')).toEqual(['A1'])
+            })
+
         })
     })
  

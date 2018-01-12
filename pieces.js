@@ -2,8 +2,15 @@
 //pathable is true if the piece can move multiple dquares in a direction
 const WHITE_PAWN = {
    movePattern: [[-1,0], [-2,0]],
-   pathable: false
+   captures: [[-1,-1],[-1,1]],
+   doubleMoveAllowed: true
 }
+
+const BLACK_PAWN = {
+    movePattern: [[1,0], [2,0]],
+    captures: [[1,-1],[1,1]],
+    doubleMoveAllowed: true
+ }
 
 const KNIGHT = {
     movePattern: [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]],
@@ -30,6 +37,14 @@ const QUEEN = {
     pathable: true
 }
 
+function pawnOnStartingSquare (piece) {
+    if (piece.color === 'black') {
+       return piece.position[0] === 1
+    } else {
+        return piece.position[0] === 6
+    }
+}
+
 
 const Piece = (type, position) => {
     if(type === '-') { return {} }
@@ -43,24 +58,36 @@ const Piece = (type, position) => {
         position
     }
    
+    if (piece.type === 'p') {
+        let p
+        if (piece.color === 'white') { 
+            p = Object.assign(piece, WHITE_PAWN) 
+        }
+        else if (piece.color === 'black') { 
+            p = Object.assign(piece, BLACK_PAWN) 
+        }
+        if (!pawnOnStartingSquare(p)) p.doubleMoveAllowed = false 
+        return p
+    }
+
     switch (piece.type) {
         case 'p': {
-            return newPiece = Object.assign(piece, WHITE_PAWN)
+            return Object.assign(piece, WHITE_PAWN)
         }
         case 'r': {
-            return newPiece = Object.assign(piece, ROOK)
+            return Object.assign(piece, ROOK)
         }
         case 'n': {
-            return newPiece = Object.assign(piece, KNIGHT)
+            return Object.assign(piece, KNIGHT)
         }
         case 'b': {
-            return newPiece = Object.assign(piece, BISHOP)
+            return Object.assign(piece, BISHOP)
         }
         case 'q': {
-            return newPiece = Object.assign(piece, QUEEN)
+            return Object.assign(piece, QUEEN)
         }
         case 'k': {
-            return newPiece = Object.assign(piece, KING)
+            return Object.assign(piece, KING)
         }
     }
   

@@ -29,7 +29,7 @@ var Chess = function (FENString) {
 //TRACKED VARIABLES
     let currentBoard
     currentBoard = load(FENString) || DEFAULT_START_POSITION
-
+    let currentPlayer = 'white'
 
 //HELPER FUNCTIONS
     function toArrayCoordinates (str) {
@@ -92,25 +92,116 @@ var Chess = function (FENString) {
             if (isMoveLegal(newPosition))  moves.push(newPosition)   
             return moves
         }, [])
-     
     }
 
     function pathedMoves (position, moveArray) {
         return moveArray.reduce((moves, move) => {
             let pathing = true, newPosition = addVectors(position, move)
             while (pathing) {
-                isMoveLegal(newPosition) ? moves.push(newPosition) : pathing = false  
+                if (isMoveLegal(newPosition)) {
+                    moves.push(newPosition)
+                    if (isEnemyPiece(getSquare(newPosition))) { pathing = false } 
+                } else {
+                    pathing = false
+                }
+                
+                
                 newPosition = addVectors(newPosition, move)
             }    
             return moves
         }, [])
     }
 
-    function isMoveLegal (pos) {
-        if (isOnBoard(pos) && getSquare(pos) === null) {
-            return true
+    function pawnMoves (pawn) {
+        let moves = []
+        //normal moves
+        if (pawn.doubleMoveAllowed) {
+            for (var i = 0; i < pawn.movePattern.length; i++) {
+                let newPosition = addVectors(pawn.position, pawn.movePattern[i])
+                if (getSquare(newPosition)) { break }
+                else {
+                    if(isMoveLegal(newPosition)) moves.push(newPosition)
+                }
+            }
+        } else {
+            let newPosition = addVectors(pawn.position, pawn.movePattern[0])
+            if (!getSquare(newPosition)) {
+                if(isMoveLegal(newPosition)) moves.push(newPosition)
+            }
         }
-        return false
+        //look for captures
+        for(var i = 0; i < pawn.captures.length; i++) {
+            let newPosition = addVectors(pawn.position, pawn.captures[i])
+           
+            if(isMoveLegal(newPosition)) {
+                let piece = getSquare(newPosition)           
+                if (piece && isEnemyPiece(piece)) {
+                    moves.push(newPosition)
+                }
+            }       
+        }
+
+        return moves
+    }
+
+    function isMoveLegal (pos) {
+        if (!isOnBoard(pos)) return false
+
+        let piece = getSquare(pos)
+        
+        if (piece && piece.color === currentPlayer) {
+            return false
+        }
+        return true
+    }
+
+    function isEnemyPiece(piece) {
+        return (piece && piece.color !== currentPlayer)      
+    }
+
+    function getAttackers(square) {
+        let checks = []
+        square = toArrayCoordinates(square)
+
+        //knights + king
+        let knightKingMoves = Pieces('n', square).movePattern.concat(Pieces('k', square).movePattern)
+        let possibleKnightKingChecks = directMoves(square, knightKingMoves)
+
+        possibleKnightKingChecks.forEach(square => {
+            let piece = getSquare(square)
+            if (piece && (piece.type === 'n' || piece.type === 'k') && isEnemyPiece(piece)) {
+                checks.push(square)
+            }
+        })
+
+        // pathable pieces (bishop queen rook)
+        let queenMoves = Pieces('q', square).movePattern
+        let possibleQueenChecks = pathedMoves(square, queenMoves)
+
+        possibleQueenChecks.forEach(square => {
+            let piece = getSquare(square)
+            if (piece && piece.pathable && isEnemyPiece(piece)) {
+                checks.push(square)
+            }
+        })
+
+        //pawns
+        let pawnAttacks 
+        currentPlayer === 'white' ? pawnAttacks = Pieces('P', square).captures :
+                                    pawnAttacks = Pieces('p', square).captures
+            
+        for(var i = 0; i < pawnAttacks.length; i++) {
+            let newPosition = addVectors(square, pawnAttacks[i])
+            if(isMoveLegal(newPosition)) {
+                let piece = getSquare(newPosition)
+                if (piece && isEnemyPiece(piece) && piece.type === 'p') {
+                    checks.push(newPosition)
+                }
+            }          
+        }
+
+        if (checks.length === 0) return null
+        return checks.map((coor) => toAlgebraic(coor))
     }
     
 
@@ -147,11 +238,16 @@ var Chess = function (FENString) {
 
     function validMoves (square) {
         let piece = getSquare(square)
-        if(!piece) return [] 
+        if(!piece || isEnemyPiece(piece)) return [] 
 
         let moves = []
-        moves = piece.pathable ? pathedMoves(piece.position, piece.movePattern) : 
-                                 directMoves(piece.position, piece.movePattern)
+        if (piece.type === 'p') {
+            moves = pawnMoves(piece)
+        } else {
+            moves = piece.pathable ? pathedMoves(piece.position, piece.movePattern) : 
+            directMoves(piece.position, piece.movePattern)
+        }
+       
        
         return moves.map((coordinates) => toAlgebraic(coordinates))
     }
@@ -159,19 +255,50 @@ var Chess = function (FENString) {
     function place (piece, square) {
         let coor = toArrayCoordinates(square)
         currentBoard[coor[0]][coor[1]] = piece
-        return Pieces(piece)
+        return Pieces(piece, [coor[0],coor[1]])
     }
 
-//EXPOSE API FUNCTIONS AS OBJECT
+    function setPlayer (color) {   
+        if (color === 'white' || color === 'black') { 
+            currentPlayer = color
+        } else {
+            throw new Error('Color must be black or white.') 
+        }   
+    }
+
+    function find (pieceType, color) {
+        return currentBoard.reduce((squares, row, j) => {
+            for (var i = 0; i < row.length; i++) {
+                let square = [j,i]
+                let piece = getSquare(square)
+                if (piece && piece.type === pieceType && piece.color === color) {
+                    squares.push(toAlgebraic(square))
+                }
+            }
+            return squares
+        }, [])
+    }
+
+    function inCheck() {
+        return getAttackers(find('k', currentPlayer)[0])
+    }
+
+//EXPOSE API FUNCTIONS AS OBJECT        //(fen) => sets initial position
     return {
-        position: () => currentBoard,
-        load,
-        reset,
-        clear,
-        getSquare,
-        place,
-        validMoves
+        position: () => currentBoard,  // => returns array of characters
+        player: () => currentPlayer,  // => returns white/black
+        setPlayer,                   // (color) => sets player to white/black
+        load,                       // (fen) => loads in a new fen board
+        reset,                     // => set board to the start position
+        clear,                    // => remove all pieces from board
+        getSquare,               //('E4') => returns piece object from the given square
+        place,                  // (piece, square) => changes piece on a given square
+        validMoves,            // ('A1') => returns the valid moves for piece on given square
+        find,                 // (type, color) => finds locations of all pieces of matching type and color
+        inCheck              //  => returns null if no checks are found, otherwise returns the squares that are giving check
     }    
 }
+
+
 
 module.exports = Chess
