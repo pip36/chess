@@ -5,30 +5,10 @@ var Chess = function (FENString) {
 
 //CONSTANTS
     const BOARD_SIZE = 8
-    const DEFAULT_START_POSITION = [
-        ['r','n','b','q','k','b','n','r'],
-        ['p','p','p','p','p','p','p','p'],
-        ['-','-','-','-','-','-','-','-'],
-        ['-','-','-','-','-','-','-','-'],
-        ['-','-','-','-','-','-','-','-'],
-        ['-','-','-','-','-','-','-','-'],
-        ['P','P','P','P','P','P','P','P'],
-        ['R','N','B','Q','K','B','N','R']
-    ]
-    const EMPTY_POSITION = [
-        ['-','-','-','-','-','-','-','-'],
-        ['-','-','-','-','-','-','-','-'],
-        ['-','-','-','-','-','-','-','-'],
-        ['-','-','-','-','-','-','-','-'],
-        ['-','-','-','-','-','-','-','-'],
-        ['-','-','-','-','-','-','-','-'],
-        ['-','-','-','-','-','-','-','-'],
-        ['-','-','-','-','-','-','-','-']
-    ]
 
 //TRACKED VARIABLES
     let currentBoard
-    currentBoard = load(FENString) || DEFAULT_START_POSITION
+    currentBoard = load(FENString) || load('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
     let currentPlayer = 'white'
 
 //HELPER FUNCTIONS
@@ -221,11 +201,11 @@ var Chess = function (FENString) {
     }
 
     function reset () {
-        currentBoard = DEFAULT_START_POSITION
+        load('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
     }
 
     function clear () {
-        currentBoard = EMPTY_POSITION 
+        load('8/8/8/8/8/8/8/8') 
     }
 
     function getSquare (square) {
