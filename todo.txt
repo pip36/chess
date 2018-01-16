@@ -2,17 +2,14 @@ RULES
 -----------------------------------------------------------
 - Castling!!
 - En Passant rule!
-- disallow moves that put own king into check!
 - Pawn Promotion!
 - threefold repetition!
 - 50-move rule!
+- Draw by insufficent material
 
 FUNCTION
 ---------------------------------------------------------
-- Move(square1, square2) 
 - Load() parse all data from fen, castling, passant etc...
-- isCheckmate()
-- isStalemate()
 
 GUI
 ---------

@@ -212,59 +212,59 @@ describe("Chess object", () => {
     describe("get square function", () => {
         it("should return null if no square is provided", () => {
             var chess = Chess()
-            var piece = chess.getSquare()
+            var piece = chess.getPiece()
             expect(piece).toEqual(null)
         })
         it("if square is empty should return null", () => {
             var chess = Chess()
-            var piece = chess.getSquare('E5')
+            var piece = chess.getPiece('E5')
             expect(piece).toEqual(null)
         })
         it("should return rooks", () => {
             var chess = Chess()
-            var piece = chess.getSquare('A1')
+            var piece = chess.getPiece('A1')
             expect(piece.type).toEqual('r')
             expect(piece.color).toEqual('white')
             expect(piece.position).toEqual([7,0])
         })
         it("should return pawns", () => {
             var chess = Chess()
-            var piece = chess.getSquare('C2')
+            var piece = chess.getPiece('C2')
             expect(piece.type).toEqual('p')
             expect(piece.color).toEqual('white')
             expect(piece.position).toEqual([6,2])
         })
         it("should return knights", () => {
             var chess = Chess()
-            var piece = chess.getSquare('B8')
+            var piece = chess.getPiece('B8')
             expect(piece.type).toEqual('n')
             expect(piece.color).toEqual('black')
             expect(piece.position).toEqual([0,1])
         })
         it("should return bishops", () => {
             var chess = Chess()
-            var piece = chess.getSquare('C8')
+            var piece = chess.getPiece('C8')
             expect(piece.type).toEqual('b')
             expect(piece.color).toEqual('black')
             expect(piece.position).toEqual([0,2])
         })
         it("should return queens", () => {
             var chess = Chess()
-            var piece = chess.getSquare('D1')
+            var piece = chess.getPiece('D1')
             expect(piece.type).toEqual('q')
             expect(piece.color).toEqual('white')
             expect(piece.position).toEqual([7,3])
         })
         it("should return kings", () => {
             var chess = Chess()
-            var piece = chess.getSquare('E8')
+            var piece = chess.getPiece('E8')
             expect(piece.type).toEqual('k')
             expect(piece.color).toEqual('black')
             expect(piece.position).toEqual([0,4])
         })
         it("should handle lower case inputs", () => {
             var chess = Chess()
-            var piece = chess.getSquare('a1')
+            var piece = chess.getPiece('a1')
             expect(piece.type).toEqual('r')
             expect(piece.color).toEqual('white')
             expect(piece.position).toEqual([7,0])
@@ -275,14 +275,14 @@ describe("Chess object", () => {
         it("should place a white pawn on square", () => {
             var chess = Chess()
             chess.place('P', 'E6')
-            expect(chess.getSquare('E6').type).toEqual('p')
-            expect(chess.getSquare('E6').color).toEqual('white')
+            expect(chess.getPiece('E6').type).toEqual('p')
+            expect(chess.getPiece('E6').color).toEqual('white')
         })
         it("should overwrite existing pieces", () => {
             var chess = Chess()
             chess.place('p', 'A1')
-            expect(chess.getSquare('A1').type).toEqual('p')
-            expect(chess.getSquare('A1').color).toEqual('black')
+            expect(chess.getPiece('A1').type).toEqual('p')
+            expect(chess.getPiece('A1').color).toEqual('black')
         })
         it("should return the placed piece", () => {
             var chess = Chess()
@@ -293,27 +293,27 @@ describe("Chess object", () => {
         it("should place knights", () => {
             var chess = Chess()
             chess.place('n', 'E6')
-            expect(chess.getSquare('E6').type).toEqual('n')
-            expect(chess.getSquare('E6').color).toEqual('black')
+            expect(chess.getPiece('E6').type).toEqual('n')
+            expect(chess.getPiece('E6').color).toEqual('black')
         })
         it("should place rooks", () => {
             var chess = Chess()
             chess.place('r', 'E6')
-            expect(chess.getSquare('E6').type).toEqual('r')
-            expect(chess.getSquare('E6').color).toEqual('black')
+            expect(chess.getPiece('E6').type).toEqual('r')
+            expect(chess.getPiece('E6').color).toEqual('black')
         })
         it("should place queens", () => {
             var chess = Chess()
             chess.place('q', 'E6')
-            expect(chess.getSquare('E6').type).toEqual('q')
-            expect(chess.getSquare('E6').color).toEqual('black')
+            expect(chess.getPiece('E6').type).toEqual('q')
+            expect(chess.getPiece('E6').color).toEqual('black')
         })
         it("should place kings", () => {
             var chess = Chess()
             chess.clear()
             chess.place('K', 'A1')
-            expect(chess.getSquare('A1').type).toEqual('k')
-            expect(chess.getSquare('A1').color).toEqual('white')
+            expect(chess.getPiece('A1').type).toEqual('k')
+            expect(chess.getPiece('A1').color).toEqual('white')
         })
 
     })
@@ -438,6 +438,46 @@ describe("Chess object", () => {
             chess.setPlayer('black')
             expect(chess.validMoves('A1')).toEqual(['B3', 'C2'])
         })
+        it("should not allow move that puts own king in check", () => {
+            var chess = Chess()
+            chess.place('q', 'E6')
+            chess.place('N', 'E2')
+            expect(chess.validMoves('E2')).toEqual([])
+        })
+        it("should not allow move that puts own king in check", () => {
+            var chess = Chess()
+            chess.place('q', 'E6')
+            chess.place('-', 'E2')
+            expect(chess.inCheck()).toEqual(['E6'])
+        })
+        it("should show in check", () => {
+            var chess = Chess()
+            chess.place('q', 'E6')
+            chess.place('p', 'D3')
+            expect(chess.validMoves('E2')).toEqual(['E3', 'E4'])
+        })
+        it("should not allow move that puts own king in check on black", () => {
+            var chess = Chess()
+            chess.setPlayer('black')
+            chess.place('n', 'E7')
+            chess.place('Q', 'E2')
+            expect(chess.validMoves('E7')).toEqual([])
+        })
+        it("should not allow capture that puts own king in check on black", () => {
+            var chess = Chess()
+            chess.setPlayer('black')
+            chess.place('P', 'F6')
+            chess.place('Q', 'E2')
+            expect(chess.validMoves('E7')).toEqual(['E6', 'E5'])
+        })
+        it("should not allow king to move into check", () => {
+            var chess = Chess()
+            chess.clear()
+            chess.place('K','A1')
+            chess.place('r', 'B8')
+            expect(chess.validMoves('A1')).toEqual(['A2'])
+        })
+       
 
         describe("pawns", () => {
             it("white should have 2 valid moves on start position", () => {
@@ -511,6 +551,123 @@ describe("Chess object", () => {
             })
 
         })
+        describe("move function", () => {
+            it("should make a valid move", () => {
+                var chess = Chess()
+                chess.move('E2','E4')
+                expect(chess.getPiece('E4').type).toEqual('p')
+                expect(chess.getPiece('E2')).toEqual(null)
+            })
+            it("should throw error on invalid move", () => {
+                var chess = Chess()
+                expect(() => chess.move('E2','E5')).toThrow(new Error ('Move is invalid'))
+            })
+            it("should only allow moves for current player", () => {
+                var chess = Chess()
+                expect(() => chess.move('E7','E5')).toThrow(new Error ('Move is invalid'))
+            })
+            it("should let black move on his turn", () => {
+                var chess = Chess()
+                chess.setPlayer('black')
+                chess.move('E7','E5')
+                expect(chess.getPiece('E5').type).toEqual('p')
+                expect(chess.getPiece('E7')).toEqual(null)
+            })
+            it("should move knights", () => {
+                var chess = Chess()
+                chess.move('B1','C3')
+                expect(chess.getPiece('C3').type).toEqual('n')
+                expect(chess.getPiece('B1')).toEqual(null)
+            })
+            it("should move black knights", () => {
+                var chess = Chess()
+                chess.setPlayer('black')
+                chess.move('B8','C6')
+                expect(chess.getPiece('C6').type).toEqual('n')
+                expect(chess.getPiece('B8')).toEqual(null)
+            })
+            it("should chage to the other players turn", () => {
+                var chess = Chess()
+                chess.move('E2','E4')
+                expect(chess.player()).toEqual('black')
+            })
+            
+        })
+
+        describe("checkmate function", () => {
+            it("should return true for checkmate position", () => {
+                var chess = Chess()
+                chess.clear()
+                chess.place('K','A1')
+                chess.place('q', 'C2')
+                chess.place('r', 'A8')
+                expect(chess.isCheckmate()).toEqual(true)
+            })
+            it("should return false if not checkmate", () => {
+                var chess = Chess()
+                chess.clear()
+                chess.place('K','A1')
+                chess.place('r', 'A8')
+                expect(chess.isCheckmate()).toEqual(false)
+            })
+            it("should return false if stalemate", () => {
+                var chess = Chess()
+                chess.clear()
+                chess.place('K','A1')
+                chess.place('q', 'C2')
+                expect(chess.isCheckmate()).toEqual(false)
+            })
+            it("should return false if piece giving check can be captured", () => {
+                var chess = Chess()
+                chess.clear()
+                chess.place('K','A1')
+                chess.place('q', 'B2')
+                expect(chess.isCheckmate()).toEqual(false)
+            })
+            it("should return true if piece giving check is protected by another piece", () => {
+                var chess = Chess()
+                chess.clear()
+                chess.place('K','A1')
+                chess.place('q', 'B2')
+                chess.place('n', 'C4')
+                expect(chess.isCheckmate()).toEqual(true)
+            })
+            
+        })
+        describe("stalemate function", () => {
+            it("should return false for checkmate position", () => {
+                var chess = Chess()
+                chess.clear()
+                chess.place('K','A1')
+                chess.place('q', 'C2')
+                chess.place('r', 'A8')
+                expect(chess.isStalemate()).toEqual(false)
+            })
+            it("should return false if not stalemate", () => {
+                var chess = Chess()
+                chess.clear()
+                chess.place('K','A1')
+                chess.place('r', 'A8')
+                expect(chess.isStalemate()).toEqual(false)
+            })
+            it("should return true if stalemate", () => {
+                var chess = Chess()
+                chess.clear()
+                chess.place('K','A1')
+                chess.place('q', 'C2')
+                expect(chess.isStalemate()).toEqual(true)
+            })
+            it("should return false if piece giving check can be captured", () => {
+                var chess = Chess()
+                chess.clear()
+                chess.place('K','A1')
+                chess.place('q', 'B2')
+                expect(chess.isStalemate()).toEqual(false)
+            })
+            
+        })
+         
+         
     })
  
 })
