@@ -1,6 +1,5 @@
 RULES
 -----------------------------------------------------------
-- Castling!!
 - En Passant rule!
 - Pawn Promotion!
 - threefold repetition!
@@ -10,6 +9,7 @@ RULES
 FUNCTION
 ---------------------------------------------------------
 - Load() parse all data from fen, castling, passant etc...
+-test that checks can be blocked. ischeckmate()
 
 GUI
 ---------

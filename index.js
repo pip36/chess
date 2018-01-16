@@ -10,6 +10,12 @@ var Chess = function (FENString) {
     let currentBoard
     currentBoard = load(FENString) || load('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
     let currentPlayer = 'white'
+    let castling = {
+        K: true,
+        Q: true,
+        k: true,
+        q: true
+    }
 
 //HELPER FUNCTIONS
     function errorMessage (msg) {
@@ -17,71 +23,78 @@ var Chess = function (FENString) {
     }
 
     function toArrayCoordinates (str) {
-        if(typeof str !== 'string') { errorMessage('toArrayCoordinates expects a string') }
+        if (typeof str !== 'string') errorMessage('toArrayCoordinates expects a string') 
         let arr = str.toLowerCase().split('')
 		return [8-arr[1],arr[0].charCodeAt(0) - 97]
     }
 
     function toAlgebraic (arr) {
-        if(!Array.isArray(arr)) { errorMessage('toAlgebraic expects an array')}
+        if (!Array.isArray(arr)) errorMessage('toAlgebraic expects an array')
         let char = String.fromCharCode(97 + arr[1])
 		return (char + (8-arr[0]).toString()).toUpperCase()
     }
 
     function addVectors (a,b) {
-        if(!Array.isArray(a) || !Array.isArray(b)) {errorMessage('addVectors expects 2 arrays')}
+        if (!Array.isArray(a) || !Array.isArray(b)) errorMessage('addVectors expects 2 arrays')
         return [a[0]+b[0], a[1]+b[1]]
     }
 
     function isOnBoard (coor) {
-        if(!Array.isArray(coor)) {errorMessage('isOnBoard expects an array')}
+        if (!Array.isArray(coor)) errorMessage('isOnBoard expects an array')
         return (coor[0] >= 0 && coor[0] < 8 && coor[1] >= 0 && coor[1] < 8)
     }
 
     function getSquare (square, board = currentBoard) {
-        if(!Array.isArray(square)) {
-            square = toArrayCoordinates(square)
-        } 
-        if(isOnBoard(square)) {
-            return board[square[0]][square[1]]
-        }
+        if (!Array.isArray(square)) square = toArrayCoordinates(square)  
+        if (isOnBoard(square)) return board[square[0]][square[1]]
         errorMessage('Invalid getSquare value')
     }
 
     function isWhite (val) {
-        if(val === '-') return false
-        if(val === val.toUpperCase()) return true
-        return false
+        if (val === '-') return false
+        return val === val.toUpperCase()
     }
 
     function isBlack (val) {
-        if(val === '-') return false
-        if(val === val.toLowerCase()) return true
-        return false
+        if (val === '-') return false
+        return val === val.toLowerCase()
     }
 
     function isEmpty(val) {
-        if(val === '-') return true
-        return false
+        return val === '-'
     }
 
     function isFriendlyPiece(val) {
-        if(isEmpty(val)) return false
-        if((isWhite(val) && currentPlayer === 'white') || 
-           (isBlack(val) && currentPlayer === 'black')) { return true }
-        return false 
+        if (isEmpty(val)) return false
+        return ((isWhite(val) && currentPlayer === 'white') || 
+                (isBlack(val) && currentPlayer === 'black'))
     }
 
     function isEnemyPiece(val) {
         if(isEmpty(val)) return false
-        if((isWhite(val) && currentPlayer === 'black') || 
-           (isBlack(val) && currentPlayer === 'white')) { return true }
-        return false 
+        return ((isWhite(val) && currentPlayer === 'black') || 
+                (isBlack(val) && currentPlayer === 'white')) 
     }
 
+    function isCastlingLegal (rookSquare, clearSquares) {
+        if (getSquare(rookSquare).toLowerCase() !== 'r' || inCheck()) return false
+        for(let i = 0; i < clearSquares.length; i++){
+            if (!isEmpty(getSquare(clearSquares[i])) || 
+                getAttackers(clearSquares[i]) !== null ) return false
+        }                 
+        return true
+    }
 
-//*FEN FUNCTIONS
-// 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+    function kingTrapped () {
+        let kingPosition = findKing()
+        return validMoves(kingPosition).length === 0
+    }
+
+//FEN FUNCTIONS
+    function convertFenRowToArray (row) {
+        return row.split('').reduce(parseFenRow, [])
+    }
+
     function parseFenRow (result, value) {
         if (isNaN(value)) {
             result.push(value)
@@ -95,38 +108,28 @@ var Chess = function (FENString) {
         }
     }
 
-    function convertFenRowToArray (row) {
-        return row.split('').reduce(parseFenRow, [])
-    }
-
     function isValidFEN (fen) {
         if (fen === undefined) return false 
         let rows = fen.split(' ')[0].split('/') 
-        if (rows.length !== BOARD_SIZE) { 
-            throw new Error('Fen string has wrong number of rows.') 
-        }
+        if (rows.length !== BOARD_SIZE) errorMessage('Fen string has wrong number of rows.')     
         rows.forEach(row => {
             let newRow = convertFenRowToArray(row)
-            if(newRow.length !== BOARD_SIZE) {
-                throw new Error('Fen string has a row with wrong number of pieces.') 
-            }
+            if (newRow.length !== BOARD_SIZE) errorMessage('Fen string has a row with wrong number of pieces.')
         })
         return true
     }
 
-//*MOVES FUNCTIONS 
-
-    // return positions that are on the board
+//MOVES FUNCTIONS 
+    // returns list of coordinates that are on the board
     function getPossibleMoves (positionArr, movesArr) {
         return movesArr.reduce((possibleMoves, move) => {
             let newPosition = addVectors(positionArr, move)
-            if(isOnBoard(newPosition)) {
-                possibleMoves.push(newPosition)
-            }
+            if (isOnBoard(newPosition)) possibleMoves.push(newPosition)
             return possibleMoves
         }, [])
     }
 
+    // returns list of moves for pieces that allow pathing
     function getPossibleMovesPathed (positionArr, movesArr, board = currentBoard) {
         return movesArr.reduce((possibleMoves, move) => {
             let pathing = true, newPosition = addVectors(positionArr, move)
@@ -136,18 +139,17 @@ var Chess = function (FENString) {
                     if(!isEmpty(cell)) {
                         possibleMoves.push(newPosition)
                         pathing = false
-                    } else {
-                        possibleMoves.push(newPosition)
-                    }
-                } else {
-                    pathing = false
-                }
+                    } 
+                    else possibleMoves.push(newPosition)     
+                } 
+                else pathing = false
                 newPosition = addVectors(newPosition, move)            
             }        
             return possibleMoves
         }, [])
     }
 
+    // redo if poss. handles pawn move case (separate captures/moves?) (doing too many things)
     function pawnMoves (pawn) {
         let moves = []
         //normal moves
@@ -176,17 +178,13 @@ var Chess = function (FENString) {
                 }
             }       
         }
-
         return moves
     }
 
     function filterEnemyOfType (arr, type) {
         return arr.filter((position) => {
             let cell = getSquare(position)
-            if (!isEmpty(cell) && cell.toLowerCase() === type && isEnemyPiece(cell)) {
-                return true
-            }
-            return false
+            return (!isEmpty(cell) && cell.toLowerCase() === type && isEnemyPiece(cell))
         })
     }
 
@@ -194,6 +192,18 @@ var Chess = function (FENString) {
         let checks = [] 
         square = toArrayCoordinates(square)
 
+/*refactor? iterate over pieces object perhaps?
+    pieces = [ {
+        type: 'n'
+        movepattern: [3,3,3,3]
+        isPathable?: false
+    },
+    {
+
+    }
+]
+...different case for pawns (maybe just move into own function)
+*/
         //knights
         let possibleKnightChecks = getPossibleMoves(square, Pieces('n', square).movePattern)
         checks.push(...filterEnemyOfType(possibleKnightChecks, 'n'))
@@ -212,7 +222,6 @@ var Chess = function (FENString) {
 
         // pathable pieces (bishop queen rook)
         let possibleBishopChecks = getPossibleMovesPathed(square, Pieces('b', square).movePattern, board)
-
         checks.push(...filterEnemyOfType(possibleBishopChecks, 'b'))
 
         //pawns
@@ -235,17 +244,13 @@ var Chess = function (FENString) {
     }
     
 
-    
+    //API FUNCTIONS
 
-    //*API FUNCTIONS
-    // 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
     function load (fenString) { 
         if (!isValidFEN(fenString)) return false
         let result = []
         let rows = fenString.split(' ')[0].split('/') 
-
         rows.forEach(row => result.push(convertFenRowToArray(row)))
-
         currentBoard = result
         return result
     }
@@ -257,8 +262,8 @@ var Chess = function (FENString) {
     function clear () {
         load('8/8/8/8/8/8/8/8') 
     }
-
-    
+ 
+    // could be unneccessary, (move pieces obj to constants? forget constructing them?)
     function getPiece (square, board = currentBoard) {
         if (square === undefined) return null 
         let coor
@@ -269,7 +274,7 @@ var Chess = function (FENString) {
 
     function validMoves (square) {
         let cell = getSquare(square)
-        if(isEmpty(cell) || isEnemyPiece(cell)) return []
+        if (isEmpty(cell) || isEnemyPiece(cell)) return []
 
         let piece = getPiece(square)
         let moves = []
@@ -278,20 +283,46 @@ var Chess = function (FENString) {
         } else {
             if (piece.pathable) {
                 moves = getPossibleMovesPathed(piece.position, piece.movePattern)
-                        .filter(isEmptyOrEnemy)
-                        
+                        .filter(isEmptyOrEnemy)                 
             } else {
                 moves = getPossibleMoves(piece.position, piece.movePattern)
-                        .filter(isEmptyOrEnemy)
-                       
-            }
-            
+                        .filter(isEmptyOrEnemy)                 
+            }      
         }   
-        //REMOVE MOVES THAT PUT KING IN CHECK
-        moves = filterMovesThatPutKingInCheck(moves, toArrayCoordinates(square)) // => return only safe moves
+        moves = filterMovesThatPutKingInCheck(moves, toArrayCoordinates(square))
+
+        //castling
+        if(piece.type === 'k') {
+            if(piece.color === 'white') {
+                if(findKing() === 'E1' && castling.K) {
+                    if(isCastlingLegal('H1', ['F1','G1'])) {
+                        moves.push([7,6])
+                    }               
+                }
+                if(findKing() === 'E1' && castling.Q) {
+                    if(isCastlingLegal('A1', ['B1','C1','D1'])) {
+                        moves.push([7,2])
+                    }                     
+                }
+            }
+            else if(piece.color === 'black') {
+                if(findKing() === 'E8' && castling.k) {
+                    if(isCastlingLegal('H8', ['F8','G8'])) {
+                        moves.push([0,6])
+                    }                
+                }
+                if(findKing() === 'E8' && castling.q) {
+                    if(isCastlingLegal('A8', ['B8','C8','D8'])) {
+                        moves.push([0,2])
+                    }     
+               }
+            }
+        }
         
         return moves.map((coordinates) => toAlgebraic(coordinates))
     }
+
+    
 
     function filterMovesThatPutKingInCheck(moveArr, position) {
         return moveArr.filter((move) => {
@@ -306,18 +337,14 @@ var Chess = function (FENString) {
         let kingPosition = find('k', color, board)[0] 
         if (!kingPosition || kingPosition.length === 0) { return false }
         let attackers = getAttackers(kingPosition, board)
-        if(!attackers) return false
-        if(attackers.length > 0) return true
-        return false
+        if (!attackers) return false
+        return attackers.length > 0
     }
     
 
     function isEmptyOrEnemy (position) {
         let cell = getSquare(position)
-        if(isEmpty(cell) || isEnemyPiece(cell)) {
-            return true
-        }
-        return false
+        return (isEmpty(cell) || isEnemyPiece(cell))
     }
 
     
@@ -328,16 +355,13 @@ var Chess = function (FENString) {
     }
 
     function setPlayer (color) {   
-        if (color === 'white' || color === 'black') { 
-            currentPlayer = color
-        } else {
-            throw new Error('Color must be black or white.') 
-        }   
+        (color === 'white' || color === 'black') ? currentPlayer = color : 
+                                                   errorMessage('Color must be black or white.') 
+       
     }
 
     function swapPlayer () {
-        if(currentPlayer === 'white') { setPlayer('black') }
-        else { setPlayer('white') }
+        (currentPlayer === 'white') ? setPlayer('black') : setPlayer('white')
     }
 
     function find (pieceType, color, board = currentBoard) {
@@ -361,8 +385,7 @@ var Chess = function (FENString) {
         let possibleMoves = validMoves(square1)
         for(let i = 0; i < possibleMoves.length; i++){
             if(possibleMoves[i] === square2) {
-                makeMove(square1, square2)
-                swapPlayer()
+                makeMove(square1, square2)           
                 return
             }
         }
@@ -370,33 +393,69 @@ var Chess = function (FENString) {
     }
 
     function makeMove (square1, square2) {
+        let piece = getPiece(square1)
+      
+        // SORT THIS
+        if(piece.type === 'k') {
+            if(piece.color === 'white') {
+                castling.K = false
+                castling.Q = false
+                if(square1 === 'E1' && square2 === 'G1') {
+                    swapSquares('H1', 'F1')
+                }
+                else if(square1 === 'E1' && square2 === 'C1') {
+                    swapSquares('A1', 'D1')
+                }
+            } 
+            else if(piece.color === 'black') {
+                castling.k = false
+                castling.q = false
+                if(square1 === 'E8' && square2 === 'G8') {
+                    swapSquares('H8', 'F8')
+                }
+                else if(square1 === 'E8' && square2 === 'C8') {
+                    swapSquares('A8', 'D8')
+                }     
+            }
+        }
+        else if(piece.type === 'r') {
+            if (piece.color === 'white') {
+                if (toAlgebraic(piece.position) === 'H1') {
+                    castling.K = false
+                } 
+                else if (toAlgebraic(piece.position) === 'A1') {
+                    castling.Q = false
+                }
+            } 
+            else if(piece.color === 'black'){
+                if (toAlgebraic(piece.position) === 'H8') {
+                    castling.k = false
+                } 
+                else if (toAlgebraic(piece.position) === 'A8') {
+                    castling.q = false
+                }
+            }
+        }
+
+        swapSquares(square1,square2)
+        swapPlayer()
+    }
+
+    function swapSquares (square1, square2) {
         square1 = toArrayCoordinates(square1)
         square2 = toArrayCoordinates(square2)
         currentBoard[square2[0]][square2[1]] = currentBoard[square1[0]][square1[1]]
-        currentBoard[square1[0]][square1[1]] = '-'   
+        currentBoard[square1[0]][square1[1]] = '-'
     }
 
     function isCheckmate () {
-        if(inCheck()) {
-            let kingPosition = findKing()
-            if(validMoves(kingPosition).length === 0) {
-                return true
-            }
-        }
-        return false
+        // not checking for blocks to the check!!!! write test case
+        return (inCheck() !== null && kingTrapped())          
     }
 
     function isStalemate () {
-        if(!inCheck()){
-            let kingPosition = findKing()
-            if(validMoves(kingPosition).length === 0) {
-                return true
-            }
-        }
-        return false
+        return !inCheck() && kingTrapped() 
     }
-
-   
 
     function inCheck() {
         return getAttackers(find('k', currentPlayer)[0])
@@ -420,7 +479,5 @@ var Chess = function (FENString) {
         move
     }    
 }
-
-
 
 module.exports = Chess
